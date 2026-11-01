@@ -1,5 +1,39 @@
 # Remittance Tracker for International Students
 
+## Problem
+
+International students who send money to family or friends back home or abroad may
+need to keep track of how much they have sent, when they sent it, and how much
+the recipient is expected to receive after currency conversion. Keeping these
+details across transfer confirmations or personal notes makes it difficult to
+review remittance history and plan a monthly budget.
+
+The Remittance Tracker provides one place to record and review transfers. It
+calculates an estimated received amount using an exchange rate; it is for
+personal tracking only and does not send money or guarantee the rate applied by
+a transfer provider.
+
+## Intended Users
+
+- **Primary users:** International students in Canada who send money to
+  recipients in another country, such as family in India.
+- **User goals:** Record the recipient, amount sent, exchange rate, date sent, expected date that the money will be reeived and
+  purpose; review past remittances and estimated received amounts; and manage a
+  monthly remittance budget.
+- **Out of scope:** Recipients do not need accounts, and the application does
+  not initiate or process money transfers.
+
+## Draft Data Model
+
+The following entities support the planned remittance and budget features. Each
+remittance and budget belongs to one user.
+
+| Entity | Fields | Relationships and notes |
+|---|---|---|
+| **User** | `id` (primary key), `name`, `email`, `passwordHash`, `createdAt` | Has many remittances and budgets. Email is unique. |
+| **Remittance** | `id` (primary key), `userId` (foreign key), `recipient`, `amountSent`, `sourceCurrency`, `destinationCurrency`, `exchangeRate`, `amountReceivedEstimate`, `date`, `purpose`, `createdAt`, `updatedAt` | Belongs to one user. The estimate is calculated from the sent amount and exchange rate; the currencies and rate are stored to preserve the recorded transaction details. |
+| **Budget** | `id` (primary key), `userId` (foreign key), `amount`, `currency`, `month`, `year`, `createdAt`, `updatedAt` | Belongs to one user. A user's budget is identified by its month and year. |
+
 ## External API
 - **Name:** Frankfurter Currency Exchange API
 - **Docs:** https://frankfurter.app/docs
@@ -18,9 +52,10 @@
       "INR": 63.54
     }
   }
+  ```
 
 
-## Endpoint List
+  ## Endpoint List
 | Method | Path | What it does | Success Code | Error Codes |
 |---|---|---|---|---|
 | GET | `/api/remittances` | Lists all remittances for the logged-in user | 200 | 401, 500 |
@@ -59,5 +94,4 @@ API | Amrit
 Frontend, Repo and pull requests | Bhupinder
 
 Database | Sitakant 
-
 
