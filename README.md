@@ -2,6 +2,16 @@
 
 Groupe Number: 5 
 
+## MVP Features
+
+1. Add a remittance with the recipient, amount sent, exchange rate, date, and purpose.
+2. View a list of saved remittances.
+3. Edit an existing remittance.
+4. Delete/cancel a remittance.
+5. Estimate the amount received in INR and display the total sent and received.
+6. Save remittance records in the browser so they remain available between visits.
+7. Update and store sender's details/profile
+
 ## Group Members
 - Bhupinder Singh — [@bhupinders6](https://github.com/bhupinders6)
 - Sitakant Sarangi — [@Sitakant-Sarangi](https://github.com/Sitakant-Sarangi)
