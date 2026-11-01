@@ -1,0 +1,17 @@
+{
+  "name": "remittance-tracker-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "API for the Remittance Tracker",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
