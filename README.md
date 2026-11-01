@@ -3,7 +3,7 @@
 Groupe Number: 5 
 
 ## Group Members
-- Bhupinder Singh 
-- Sitakant Sarangi
-- Amrit Tiwana
+- Bhupinder Singh — [@bhupinders6](https://github.com/bhupinders6)
+- Sitakant Sarangi — [@Sitakant-Sarangi](https://github.com/Sitakant-Sarangi)
+- Amrit Tiwana — GitHub username to be added
  
