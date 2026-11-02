@@ -1,5 +1,6 @@
 const express = require("express");
 const { randomUUID } = require("node:crypto");
+const { z } = require("zod");
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -9,54 +10,50 @@ app.use(express.json());
 const remittances = [
   {
     id: randomUUID(),
-    recipient: "Priya Sharma",
+    recipient: "Priyanka",
     amount: 250,
     rate: 62.5,
-    date: "2026-10-15",
+    date: "2026-10-21",
     purpose: "Family support",
   },
   {
     id: randomUUID(),
-    recipient: "Arjun Patel",
+    recipient: "Ajay",
     amount: 150,
     rate: 62.5,
-    date: "2026-10-20",
-    purpose: "Education expenses",
+    date: "2026-11-01",
+    purpose: "Gift",
   },
 ];
 
-const remittanceFields = ["recipient", "amount", "rate", "date", "purpose"];
 const remittanceRouter = express.Router();
 
-function validateRemittance(data, partial = false) {
-  if (!data || typeof data !== "object" || Array.isArray(data)) {
-    return "Request body must be an object.";
-  }
+const remittanceSchema = z
+  .object({
+    recipient: z.string().trim().min(1, "Recipient must be a non-empty string."),
+    amount: z.number().positive("Amount must be a positive number."),
+    rate: z.number().positive("Rate must be a positive number."),
+    date: z.string().trim().min(1, "Date must be a non-empty string."),
+    purpose: z.string().trim().min(1, "Purpose must be a non-empty string."),
+  })
+  .strict();
 
-  const keys = Object.keys(data);
-  if (keys.some(key => !remittanceFields.includes(key))) {
-    return "Request body contains unsupported fields.";
-  }
-  if (partial && keys.length === 0) {
-    return "At least one field is required.";
-  }
+const remittancePatchSchema = remittanceSchema
+  .partial()
+  .refine(data => Object.keys(data).length > 0, {
+    message: "At least one field is required.",
+  });
 
-  for (const field of remittanceFields) {
-    if (!(field in data)) {
-      if (partial) continue;
-      return `The ${field} field is required.`;
-    }
+// Returns { data } on success or sends a 400 with per-field details.
+function validateBody(schema, req, res) {
+  const result = schema.safeParse(req.body);
+  if (result.success) return result.data;
 
-    const value = data[field];
-    if (field === "amount" || field === "rate") {
-      if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
-        return `The ${field} field must be a positive number.`;
-      }
-    } else if (typeof value !== "string" || value.trim() === "") {
-      return `The ${field} field must be a non-empty string.`;
-    }
-  }
-
+  const details = result.error.issues.map(issue => ({
+    field: issue.path.join(".") || "body",
+    message: issue.message,
+  }));
+  res.status(400).json({ error: "Validation failed.", details });
   return null;
 }
 
@@ -77,14 +74,25 @@ remittanceRouter.get("/:id", (req, res) => {
 });
 
 remittanceRouter.post("/", (req, res) => {
-  const error = validateRemittance(req.body);
-  if (error) {
-    return res.status(400).json({ error });
-  }
+  const data = validateBody(remittanceSchema, req, res);
+  if (!data) return;
 
-  const remittance = { id: randomUUID(), ...req.body };
+  const remittance = { id: randomUUID(), ...data };
   remittances.push(remittance);
   res.status(201).json(remittance);
+});
+
+remittanceRouter.put("/:id", (req, res) => {
+  const index = remittances.findIndex(item => item.id === req.params.id);
+  if (index === -1) {
+    return res.status(404).json({ error: "Remittance not found." });
+  }
+
+  const data = validateBody(remittanceSchema, req, res);
+  if (!data) return;
+
+  remittances[index] = { id: remittances[index].id, ...data };
+  res.json(remittances[index]);
 });
 
 remittanceRouter.patch("/:id", (req, res) => {
@@ -93,12 +101,10 @@ remittanceRouter.patch("/:id", (req, res) => {
     return res.status(404).json({ error: "Remittance not found." });
   }
 
-  const error = validateRemittance(req.body, true);
-  if (error) {
-    return res.status(400).json({ error });
-  }
+  const data = validateBody(remittancePatchSchema, req, res);
+  if (!data) return;
 
-  remittances[index] = { ...remittances[index], ...req.body };
+  remittances[index] = { ...remittances[index], ...data };
   res.json(remittances[index]);
 });
 
