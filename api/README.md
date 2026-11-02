@@ -44,4 +44,6 @@ The API stores the budget data in memory and uses ZOD to check if the informatio
 
 Budget records use userId, currency, monthlyLimit, month & year fields. 
 
+## Test command to use 
 
+curl.exe http://localhost:4000/api/budgets
