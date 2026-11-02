@@ -30,3 +30,18 @@ reset to the seed data when the server restarts.
 New records receive an ID generated with `crypto.randomUUID()`. Remittance
 records use `recipient`, `amount`, `rate`, `date`, and `purpose` fields. The
 same endpoints are also available under `/api/remitances`.
+
+## Budgets
+The API stores the budget data in memory and uses ZOD to check if the information is valid. 
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/budgets` | List all budgets |
+| GET | `/api/budgets/:id` | Get a budget by ID |
+| POST | `/api/budgets` | Create a budget |
+| PUT | `/api/budgets/:id` | Replace/Update a budget |
+| PATCH | `/api/budgets/:id` | Partially update a budget |
+| DELETE | `/api/budgets/:id` | Delete a budget |
+
+Budget records use userId, currency, monthlyLimit, month & year fields. 
+
+
