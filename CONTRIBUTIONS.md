@@ -8,6 +8,8 @@
 
 ## M2
 
+* **Amrit Tiwana:**
+* **Sitakant Sarangi:**
 * **Bhupinder Singh:** Worked on the Budget backend by adding sample data, validation, and all CRUD operations (GET, POST, PUT, PATCH, DELETE). Helped organize the Express routes in api/server.js, tested the API endpoints, and updated the README documentation for Milestone 2.
 
 
