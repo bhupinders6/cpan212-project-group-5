@@ -8,8 +8,8 @@
 
 ## M2
 
-* **Amrit Tiwana:**
-* **Sitakant Sarangi:**
+* **Amrit Tiwana:** Project setup (Node 24, ES modules, src structure), error handling middleware (404 handler + error handler), and external API endpoint (Frankfurter currency API with timeout, caching, and custom response shape).
+* **Sitakant Sarangi:**M1 fixes, worked on CRUD flow and Validation.
 * **Bhupinder Singh:** Worked on the Budget backend by adding sample data, validation, and all CRUD operations (GET, POST, PUT, PATCH, DELETE). Helped organize the Express routes in api/server.js, tested the API endpoints, and updated the README documentation for Milestone 2.
 
 

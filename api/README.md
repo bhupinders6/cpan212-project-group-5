@@ -31,6 +31,14 @@ New records receive an ID generated with `crypto.randomUUID()`. Remittance
 records use `recipient`, `amount`, `rate`, `date`, and `purpose` fields. The
 same endpoints are also available under `/api/remitances`.
 
+## External Currency API
+
+The API fetches live exchange rates with a 5-second timeout and 60-second caching.
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/exchange-rates?from=USD&to=EUR&amount=100` | Get exchange rate and optional converted amount |
+
 ## Budgets
 The API stores the budget data in memory and uses ZOD to check if the information is valid. 
 | Method | Path | Description |
