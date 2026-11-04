@@ -4,20 +4,16 @@
 
 From this directory, install dependencies and start the development server:
 
-```powershell
+```bash
 npm install
 npm run dev
 ```
 
-The server listens on port `4000` by default. Set the `PORT` environment
-variable to use a different port.
+The server listens on port `4000` by default. Set the `PORT` environment variable to use a different port.
 
 Check that it is running at [http://localhost:4000/health](http://localhost:4000/health).
 
-## Remittances
-
-The API keeps remittances in memory and starts with sample records. Records are
-reset to the seed data when the server restarts.
+## Endpoints
 
 | Method | Path | Description |
 |---|---|---|
@@ -26,23 +22,7 @@ reset to the seed data when the server restarts.
 | POST | `/api/remittances` | Create a remittance |
 | PATCH | `/api/remittances/:id` | Update a remittance |
 | DELETE | `/api/remittances/:id` | Delete a remittance |
-
-New records receive an ID generated with `crypto.randomUUID()`. Remittance
-records use `recipient`, `amount`, `rate`, `date`, and `purpose` fields. The
-same endpoints are also available under `/api/remitances`.
-
-## External Currency API
-
-The API fetches live exchange rates with a 5-second timeout and 60-second caching.
-
-| Method | Path | Description |
-|---|---|---|
 | GET | `/api/exchange-rates?from=USD&to=EUR&amount=100` | Get exchange rate and optional converted amount |
-
-## Budgets
-The API stores the budget data in memory and uses ZOD to check if the information is valid. 
-| Method | Path | Description |
-|--------|------|-------------|
 | GET | `/api/budgets` | List all budgets |
 | GET | `/api/budgets/:id` | Get a budget by ID |
 | POST | `/api/budgets` | Create a budget |
@@ -50,8 +30,92 @@ The API stores the budget data in memory and uses ZOD to check if the informatio
 | PATCH | `/api/budgets/:id` | Partially update a budget |
 | DELETE | `/api/budgets/:id` | Delete a budget |
 
-Budget records use userId, currency, monthlyLimit, month & year fields. 
+## Resource Details
 
-## Test command to use 
+### Remittances
 
-curl.exe http://localhost:4000/api/budgets
+The API keeps remittances in memory and starts with sample records. Records are reset to the seed data when the server restarts. New records receive an ID generated with `crypto.randomUUID()`. Remittance records use `recipient`, `amount`, `rate`, `date`, and `purpose` fields.
+
+### External Currency API
+
+The API fetches live exchange rates with a 5-second timeout and 60-second caching to prevent redundant external requests. It returns a custom JSON shape, not the raw external response.
+
+### Budgets
+
+The API stores the budget data in memory and uses Zod to validate the information. Budget records use `userId`, `currency`, `monthlyLimit`, `month`, and `year` fields.
+
+## Testing
+
+Run the following curl commands in your terminal to test all endpoints.
+
+### Remittances
+
+**List remittances (Expect 200):**
+
+```bash
+curl -i http://localhost:4000/api/remittances
+```
+
+**Get single remittance (Expect 200):**
+
+```bash
+curl -i http://localhost:4000/api/remittances/<valid-id>
+```
+
+**Get missing remittance (Expect 404):**
+
+```bash
+curl -i http://localhost:4000/api/remittances/invalid-id-123
+```
+
+**Create remittance (Expect 201):**
+
+```bash
+curl -i -X POST http://localhost:4000/api/remittances -H "Content-Type: application/json" -d '{"recipient":"Test","amount":100,"rate":60,"date":"2026-10-25","purpose":"Test"}'
+```
+
+**Update remittance (Expect 200):**
+
+```bash
+curl -i -X PATCH http://localhost:4000/api/remittances/<valid-id> -H "Content-Type: application/json" -d '{"amount":200}'
+```
+
+**Delete remittance (Expect 204):**
+
+```bash
+curl -i -X DELETE http://localhost:4000/api/remittances/<valid-id>
+```
+
+**Validation failure (Expect 400):**
+
+```bash
+curl -i -X POST http://localhost:4000/api/remittances -H "Content-Type: application/json" -d '{"recipient":""}'
+```
+
+### External API
+
+**Exchange rate (Expect 200):**
+
+```bash
+curl -i 'http://localhost:4000/api/exchange-rates?from=CAD&to=INR&amount=500'
+```
+
+### Budgets
+
+**List budgets (Expect 200):**
+
+```bash
+curl -i http://localhost:4000/api/budgets
+```
+
+**Create budget (Expect 201):**
+
+```bash
+curl -i -X POST http://localhost:4000/api/budgets -H "Content-Type: application/json" -d '{"userId":"user1","currency":"CAD","monthlyLimit":1000,"month":10,"year":2026}'
+```
+
+**Validation failure (Expect 400):**
+
+```bash
+curl -i -X POST http://localhost:4000/api/budgets -H "Content-Type: application/json" -d '{"userId":""}'
+```
