@@ -1,12 +1,7 @@
-const express = require("express");
-const { randomUUID } = require("node:crypto");
-const { z } = require("zod");
+import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
 
-const app = express();
-const port = process.env.PORT || 4000;
-
-app.use(express.json());
-
+// In-memory storage
 const remittances = [
   {
     id: randomUUID(),
@@ -26,62 +21,21 @@ const remittances = [
   },
 ];
 
-const remittanceRouter = express.Router();
+// Zod schemas
+const remittanceSchema = z.object({
+  recipient: z.string().trim().min(1, "Recipient must be a non-empty string."),
+  amount: z.number().positive("Amount must be a positive number."),
+  rate: z.number().positive("Rate must be a positive number."),
+  date: z.string().trim().min(1, "Date must be a non-empty string."),
+  purpose: z.string().trim().min(1, "Purpose must be a non-empty string."),
+}).strict();
 
-const remittanceSchema = z
-  .object({
-    recipient: z.string().trim().min(1, "Recipient must be a non-empty string."),
-    amount: z.number().positive("Amount must be a positive number."),
-    rate: z.number().positive("Rate must be a positive number."),
-    date: z.string().trim().min(1, "Date must be a non-empty string."),
-    purpose: z.string().trim().min(1, "Purpose must be a non-empty string."),
-  })
-  .strict();
+const remittancePatchSchema = remittanceSchema.partial().refine(
+  data => Object.keys(data).length > 0,
+  { message: "At least one field is required." }
+);
 
-  const budgets=[
-  {
-    id: randomUUID(),
-    userId: "user-1",
-    currency: "INR",
-    monthlyLimit: 30000,
-    month: "November",
-    year: 2026,
-  },
-  {
-    id: randomUUID(),
-    userId: "user-2",
-    currency: "USD",
-    monthlyLimit: 500,
-    month: "November",
-    year: 2026,
-  },
-];
-
-const budgetRouter =express.Router();
-
-const budgetSchema =z
-  .object({
-    userId: z.string().trim().min(1, "User ID must be a non-empty string."),
-    currency: z.string().trim().min(1, "Currency must be a non-empty string."),
-    monthlyLimit: z.number().positive("Monthly limit must be a positive number."),
-    month: z.string().trim().min(1, "Month must be a non-empty string."),
-    year: z.number().int().positive("Year must be a positive integer."),
-  })
-  .strict();
-
-const budgetPatchSchema=budgetSchema
-  .partial()
-  .refine(data => Object.keys(data).length > 0, {
-    message: "At least one field is required.",
-  });
-
-const remittancePatchSchema=remittanceSchema
-  .partial()
-  .refine(data => Object.keys(data).length > 0, {
-    message: "At least one field is required.",
-  });
-
-// Returns { data } on success or sends a 400 with per-field details.
+// Helper for validation
 function validateBody(schema, req, res) {
   const result = schema.safeParse(req.body);
   if (result.success) return result.data;
@@ -94,45 +48,29 @@ function validateBody(schema, req, res) {
   return null;
 }
 
-app.get("/health", (_req, res) => {
-  res.json({ status: "ok" });
-});
-
-remittanceRouter.get("/", (_req, res) => {
+// Exported Controllers
+export const listRemittances = (_req, res) => {
   res.json(remittances);
-});
+};
 
-remittanceRouter.get("/:id", (req, res) => {
+export const getRemittance = (req, res) => {
   const remittance = remittances.find(item => item.id === req.params.id);
   if (!remittance) {
     return res.status(404).json({ error: "Remittance not found." });
   }
   res.json(remittance);
-});
+};
 
-remittanceRouter.post("/", (req, res) => {
+export const createRemittance = (req, res) => {
   const data = validateBody(remittanceSchema, req, res);
   if (!data) return;
 
-  const remittance = { id: randomUUID(), ...data };
-  remittances.push(remittance);
-  res.status(201).json(remittance);
-});
+  const newRemittance = { id: randomUUID(), ...data };
+  remittances.push(newRemittance);
+  res.status(201).json(newRemittance);
+};
 
-remittanceRouter.put("/:id", (req, res) => {
-  const index = remittances.findIndex(item => item.id === req.params.id);
-  if (index === -1) {
-    return res.status(404).json({ error: "Remittance not found." });
-  }
-
-  const data = validateBody(remittanceSchema, req, res);
-  if (!data) return;
-
-  remittances[index] = { id: remittances[index].id, ...data };
-  res.json(remittances[index]);
-});
-
-remittanceRouter.patch("/:id", (req, res) => {
+export const updateRemittance = (req, res) => {
   const index = remittances.findIndex(item => item.id === req.params.id);
   if (index === -1) {
     return res.status(404).json({ error: "Remittance not found." });
@@ -143,9 +81,9 @@ remittanceRouter.patch("/:id", (req, res) => {
 
   remittances[index] = { ...remittances[index], ...data };
   res.json(remittances[index]);
-});
+};
 
-remittanceRouter.delete("/:id", (req, res) => {
+export const deleteRemittance = (req, res) => {
   const index = remittances.findIndex(item => item.id === req.params.id);
   if (index === -1) {
     return res.status(404).json({ error: "Remittance not found." });
@@ -153,70 +91,4 @@ remittanceRouter.delete("/:id", (req, res) => {
 
   remittances.splice(index, 1);
   res.status(204).end();
-});
-
-budgetRouter.get("/", (_req, res) => {
-  res.json(budgets);
-});
-
-budgetRouter.get("/:id", (req, res) => {
-  const budget =budgets.find(item => item.id === req.params.id);
-  if (!budget) {
-    return res.status(404).json({ error: "Budget not found." });
-  }
-  res.json(budget);
-});
-
-budgetRouter.post("/", (req, res) => {
-  const data =validateBody(budgetSchema, req, res);
-  if (!data) return;
-
-  const budget ={ id: randomUUID(), ...data };
-  budgets.push(budget);
-  res.status(201).json(budget);
-});
-
-budgetRouter.put("/:id", (req, res) => {
-  const index = budgets.findIndex(item => item.id === req.params.id);
-  if (index === -1) {
-    return res.status(404).json({ error: "Budget not found." });
-  }
-
-  const data =validateBody(budgetSchema, req, res);
-  if (!data) return;
-
-  budgets[index] ={ id: budgets[index].id, ...data };
-  res.json(budgets[index]);
-});
-
-budgetRouter.patch("/:id", (req, res) => {
-  const index = budgets.findIndex(item => item.id === req.params.id);
-  if (index === -1) {
-    return res.status(404).json({ error: "Budget not found." });
-  }
-
-  const data =validateBody(budgetPatchSchema, req, res);
-  if (!data) return;
-
-  budgets[index] ={ ...budgets[index], ...data };
-  res.json(budgets[index]);
-});
-
-budgetRouter.delete("/:id", (req, res) => {
-  const index = budgets.findIndex(item => item.id === req.params.id);
-  if (index === -1) {
-    return res.status(404).json({ error: "Budget not found." });
-  }
-
-  budgets.splice(index, 1);
-  res.status(204).end();
-});
-
-// Mount the budget router
-app.use("/api/budgets", budgetRouter);
-
-app.use(["/api/remitances", "/api/remittances"], remittanceRouter);
-
-app.listen(port, () => {
-  console.log(`API listening on port ${port}`);
-});
+};
