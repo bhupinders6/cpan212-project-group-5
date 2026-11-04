@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 const BUDGETS_KEY = "budgets";
 const REMITTANCES_KEY = "remittances";
+const RECORDS_EVENT = "budgets-records-updated";
+const SERVER_RECORDS_SNAPSHOT = JSON.stringify(["[]", "[]"]);
 const currency = new Intl.NumberFormat("en-CA", {
   style: "currency",
   currency: "CAD",
@@ -18,19 +20,45 @@ function currentMonth() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function formatMonth(month) {
-  return monthFormat.format(new Date(`${month}-01T00:00:00`));
+function subscribeToRecords(callback) {
+  const handleStorage = (event) => {
+    if (!event.key || event.key === BUDGETS_KEY || event.key === REMITTANCES_KEY) {
+      callback();
+    }
+  };
+  window.addEventListener("storage", handleStorage);
+  window.addEventListener(RECORDS_EVENT, callback);
+  return () => {
+    window.removeEventListener("storage", handleStorage);
+    window.removeEventListener(RECORDS_EVENT, callback);
+  };
 }
 
-function readRecords(key) {
-  const stored = localStorage.getItem(key);
-  if (!stored) return [];
-
-  const records = JSON.parse(stored);
-  if (!Array.isArray(records)) {
-    throw new Error(`Saved ${key} data is not a list. Please correct or clear it in browser storage.`);
+function getRecordsSnapshot() {
+  try {
+    return JSON.stringify([
+      localStorage.getItem(BUDGETS_KEY) ?? "[]",
+      localStorage.getItem(REMITTANCES_KEY) ?? "[]",
+    ]);
+  } catch (error) {
+    return JSON.stringify({ error: error.message });
   }
-  return records;
+}
+
+function subscribeToMonth(callback) {
+  let month = currentMonth();
+  const timer = window.setInterval(() => {
+    const nextMonth = currentMonth();
+    if (nextMonth !== month) {
+      month = nextMonth;
+      callback();
+    }
+  }, 60_000);
+  return () => window.clearInterval(timer);
+}
+
+function formatMonth(month) {
+  return monthFormat.format(new Date(`${month}-01T00:00:00`));
 }
 
 function newId() {
@@ -40,26 +68,40 @@ function newId() {
 }
 
 export default function BudgetsPage() {
-  const [budgets, setBudgets] = useState([]);
-  const [remittances, setRemittances] = useState([]);
-  const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
   const [dialogError, setDialogError] = useState("");
   const [editingId, setEditingId] = useState(null);
   const dialogRef = useRef(null);
   const formRef = useRef(null);
-  const activeMonth = currentMonth();
-
-  useEffect(() => {
+  const recordsSnapshot = useSyncExternalStore(
+    subscribeToRecords,
+    getRecordsSnapshot,
+    () => SERVER_RECORDS_SNAPSHOT,
+  );
+  const activeMonth = useSyncExternalStore(
+    subscribeToMonth,
+    currentMonth,
+    () => "",
+  );
+  const savedRecords = useMemo(() => {
     try {
-      setBudgets(readRecords(BUDGETS_KEY));
-      setRemittances(readRecords(REMITTANCES_KEY));
+      const parsed = JSON.parse(recordsSnapshot);
+      if (!Array.isArray(parsed)) throw new Error(parsed.error);
+      const budgets = JSON.parse(parsed[0]);
+      const remittances = JSON.parse(parsed[1]);
+      if (!Array.isArray(budgets) || !Array.isArray(remittances)) {
+        throw new Error("Saved budgets and remittances must be lists.");
+      }
+      return { budgets, remittances, error: "" };
     } catch (loadError) {
-      setError(`Could not load saved budget data: ${loadError.message}`);
-    } finally {
-      setReady(true);
+      return {
+        budgets: [],
+        remittances: [],
+        error: `Could not load saved budget data: ${loadError.message}`,
+      };
     }
-  }, []);
+  }, [recordsSnapshot]);
+  const { budgets, remittances } = savedRecords;
 
   const orderedBudgets = useMemo(
     () => [...budgets].sort((a, b) => b.month.localeCompare(a.month)),
@@ -93,7 +135,7 @@ export default function BudgetsPage() {
   function persist(nextBudgets) {
     try {
       localStorage.setItem(BUDGETS_KEY, JSON.stringify(nextBudgets));
-      setBudgets(nextBudgets);
+      window.dispatchEvent(new Event(RECORDS_EVENT));
       setError("");
       return true;
     } catch (saveError) {
@@ -141,18 +183,20 @@ export default function BudgetsPage() {
           <h1>Monthly budgets</h1>
           <p className="subtitle">Plan your remittances and keep each month on track.</p>
         </div>
-        <button className="button button-primary" disabled={!ready} onClick={() => openForm()}>
+        <button className="button button-primary" disabled={!activeMonth} onClick={() => openForm()}>
           <span aria-hidden="true">+</span> Add budget
         </button>
       </header>
 
-      {error && <p className="notice" role="alert">{error}</p>}
+      {(error || savedRecords.error) && (
+        <p className="notice" role="alert">{error || savedRecords.error}</p>
+      )}
 
       <section className="summary-grid" aria-label="Current month overview">
         <article className="summary-card">
           <span>Budget for this month</span>
           <strong>{currentBudget ? currency.format(currentBudget.amount) : "Not set"}</strong>
-          <small>{formatMonth(activeMonth)}</small>
+          <small>{activeMonth ? formatMonth(activeMonth) : "Loading…"}</small>
         </article>
         <article className="summary-card">
           <span>Remittances this month</span>
@@ -179,14 +223,14 @@ export default function BudgetsPage() {
           <span className="budget-count">{budgets.length} {budgets.length === 1 ? "month" : "months"}</span>
         </div>
 
-        {!ready ? (
+        {!activeMonth ? (
           <p className="empty-state">Loading your budgets…</p>
         ) : orderedBudgets.length === 0 ? (
           <div className="empty-state">
             <span className="empty-icon" aria-hidden="true">$</span>
             <h3>No budgets yet</h3>
             <p>Add a monthly budget to start tracking your remittances.</p>
-            <button className="button button-primary" disabled={!ready} onClick={() => openForm()}>
+            <button className="button button-primary" disabled={!activeMonth} onClick={() => openForm()}>
               Add your first budget
             </button>
           </div>
