@@ -16,4 +16,8 @@ Groupe Number: 5
 - Bhupinder Singh — [@bhupinders6](https://github.com/bhupinders6)
 - Sitakant Sarangi — [@Sitakant-Sarangi](https://github.com/Sitakant-Sarangi)
 - Amrit Tiwana — [@Amrit07x](https://github.com/Amrit07x)
+
+## AI use
+No AI tools were used to generate the core logic of this assignment. AI was used strictly for debugging terminal output and formatting Markdown documentation.
+
  
