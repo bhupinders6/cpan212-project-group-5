@@ -111,7 +111,7 @@ curl -i http://localhost:4000/api/budgets
 
 ```bash
 curl -i http://localhost:4000/api/budgets/b1a2c3d4-e5f6-7890-abcd-ef1234567890
-
+```
 **Create budget (Expect 201):**
 
 ```bash
@@ -121,12 +121,12 @@ curl -i -X POST http://localhost:4000/api/budgets -H "Content-Type: application/
 
 ```bash
 curl -i -X PATCH http://localhost:4000/api/budgets/b1a2c3d4-e5f6-7890-abcd-ef1234567890 -H "Content-Type: application/json" -d '{"monthlyLimit":35000}'
-
+```
 **Delete budget (Expect 204):**
 
 ```bash
 curl -i -X DELETE http://localhost:4000/api/budgets/b1a2c3d4-e5f6-7890-abcd-ef1234567890
-
+```
 **Validation failure (Expect 400):**
 
 ```bash
