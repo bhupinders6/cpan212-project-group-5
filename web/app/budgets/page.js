@@ -225,12 +225,16 @@ export default function BudgetsPage() {
 
         {!activeMonth ? (
           <p className="empty-state">Loading your budgets…</p>
+        ) : savedRecords.error ? (
+          <p className="empty-state" role="status">
+            Your budgets could not be displayed because the saved data could not be read.
+          </p>
         ) : orderedBudgets.length === 0 ? (
-          <div className="empty-state">
+          <div className="empty-state" role="status">
             <span className="empty-icon" aria-hidden="true">$</span>
             <h3>No budgets yet</h3>
             <p>Add a monthly budget to start tracking your remittances.</p>
-            <button className="button button-primary" disabled={!activeMonth} onClick={() => openForm()}>
+            <button className="button button-primary" onClick={() => openForm()}>
               Add your first budget
             </button>
           </div>
