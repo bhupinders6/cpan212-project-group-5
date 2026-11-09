@@ -26,7 +26,7 @@ let budgets= [
 
 // to get al budgets
 export const getBudgets = (req, res) => {
-    res,json(budgets);
+    res.json(budgets);
 };
 
 // to get the budgetby ID
