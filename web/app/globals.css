@@ -1,6 +1,6 @@
 body {
   font-family: Arial, Helvetica, sans-serif;
-  background-color: #ffffff;
+  background-color: #c4ec90;
   color: #000000;
   margin: 0;
   padding: 20px;
@@ -26,7 +26,6 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  border-bottom: 2px solid #000;
   padding-bottom: 12px;
   margin-bottom: 20px;
 }
@@ -43,7 +42,7 @@ body {
 }
 
 .button {
-  border: 1px solid #000;
+  border: 1px;
   background: #fff;
   padding: 6px 12px;
   cursor: pointer;
@@ -76,7 +75,7 @@ body {
 }
 
 .summary-card {
-  border: 1px solid #000;
+  border: 1px;
   padding: 15px;
   background: #fff;
   border-radius: 0;
@@ -108,7 +107,7 @@ body {
   height: 12px;
   overflow: hidden;
   background: #e5e5e5;
-  border: 1px solid #000;
+  border: 1px;
 }
 
 .progress-track span {
@@ -132,7 +131,7 @@ body {
 }
 
 .budget-panel {
-  border: 1px solid #000;
+  border: 1px;
   padding: 20px;
   background: #fff;
   margin-bottom: 20px;
@@ -165,7 +164,7 @@ body {
   background: #fff;
   padding: 4px 8px;
   font-size: 12px;
-  border: 1px solid #000;
+  border: 1px;
   border-radius: 0;
 }
 
@@ -183,7 +182,7 @@ body {
   width: 24px;
   height: 24px;
   line-height: 24px;
-  border: 1px solid #000;
+  border: 1px;
   margin-bottom: 8px;
   border-radius: 0;
 }
@@ -205,7 +204,7 @@ table {
 }
 
 th, td {
-  border: 1px solid #000;
+  border: 1px;
   padding: 10px;
   text-align: left;
   font-size: 14px;
@@ -238,7 +237,7 @@ th {
 }
 
 .budget-dialog {
-  border: 2px solid #000;
+  border: 2px;
   padding: 20px;
   width: 380px;
   background: #fff;
@@ -254,7 +253,7 @@ th {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 15px;
-  border-bottom: 1px solid #000;
+  border-bottom: 1px;
   padding-bottom: 8px;
 }
 
@@ -265,7 +264,7 @@ th {
 
 .dialog-close {
   background: none;
-  border: 1px solid #000;
+  border: 1px;
   font-size: 16px;
   cursor: pointer;
   padding: 2px 6px;
@@ -281,7 +280,7 @@ th {
 .budget-dialog input {
   width: 100%;
   padding: 6px;
-  border: 1px solid #000;
+  border: 1px;
   margin-bottom: 15px;
   box-sizing: border-box;
   border-radius: 0;
@@ -290,7 +289,7 @@ th {
 .amount-input {
   display: flex;
   align-items: center;
-  border: 1px solid #000;
+  border: 1px;
   margin-bottom: 15px;
 }
 
@@ -319,7 +318,7 @@ th {
 
 .notice {
   background: #fff;
-  border: 1px solid #000;
+  border: 1px solid;
   padding: 8px;
   font-size: 13px;
   margin-bottom: 15px;
