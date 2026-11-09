@@ -30,6 +30,7 @@ Check that it is running at [http://localhost:4000/health](http://localhost:4000
 | PATCH | `/api/budgets/:id` | Partially update a budget |
 | DELETE | `/api/budgets/:id` | Delete a budget |
 
+
 ## Resource Details
 
 ### Remittances
