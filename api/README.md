@@ -107,12 +107,25 @@ curl -i 'http://localhost:4000/api/exchange-rates?from=CAD&to=INR&amount=500'
 ```bash
 curl -i http://localhost:4000/api/budgets
 ```
+**Get budget by ID(Expect 200):**
+
+```bash
+curl -i http://localhost:4000/api/budgets/b1a2c3d4-e5f6-7890-abcd-ef1234567890
 
 **Create budget (Expect 201):**
 
 ```bash
 curl -i -X POST http://localhost:4000/api/budgets -H "Content-Type: application/json" -d '{"userId":"user1","currency":"CAD","monthlyLimit":1000,"month":10,"year":2026}'
 ```
+**Update budget (Expect 200):**
+
+```bash
+curl -i -X PATCH http://localhost:4000/api/budgets/b1a2c3d4-e5f6-7890-abcd-ef1234567890 -H "Content-Type: application/json" -d '{"monthlyLimit":35000}'
+
+**Delete budget (Expect 204):**
+
+```bash
+curl -i -X DELETE http://localhost:4000/api/budgets/b1a2c3d4-e5f6-7890-abcd-ef1234567890
 
 **Validation failure (Expect 400):**
 
