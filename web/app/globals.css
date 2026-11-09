@@ -100,6 +100,37 @@ body {
   color: #555;
 }
 
+.summary-warning {
+  border-color: #b42318;
+}
+
+.progress-track {
+  height: 12px;
+  overflow: hidden;
+  background: #e5e5e5;
+  border: 1px solid #000;
+}
+
+.progress-track span {
+  display: block;
+  height: 100%;
+  background: #555;
+}
+
+.progress-caution span {
+  background: #8a5a00;
+}
+
+.progress-danger span {
+  background: #b42318;
+}
+
+.progress-label {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
 .budget-panel {
   border: 1px solid #000;
   padding: 20px;
