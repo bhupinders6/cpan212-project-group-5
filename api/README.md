@@ -28,7 +28,7 @@ Check that it is running at [http://localhost:4000/health](http://localhost:4000
 | POST | `/api/budgets` | Create a budget |
 | PUT | `/api/budgets/:id` | Replace/Update a budget |
 | PATCH | `/api/budgets/:id` | Partially update a budget |
-| DELETE | `/api/budgets/:id` | Delete a budget |.
+| DELETE | `/api/budgets/:id` | Delete a budget |
 
 ## Resource Details
 
