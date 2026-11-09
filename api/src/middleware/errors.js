@@ -11,11 +11,11 @@ export function errorHandler(err, req, res, next) {
   const message = err.message || "Internal server error";
   const details = err.details || undefined;
 
-  const response = {
-    error: {
-      message
-    }
-  };
+ const response = {
+        error: {
+            message: message
+        }
+    };
 
   if (details) {
     response.error.details = details;
