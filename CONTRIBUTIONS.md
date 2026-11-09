@@ -14,6 +14,6 @@
 
 
 ## M3
-* **Amrit Tiwana:** 
+* **Amrit Tiwana:** Built Remittances List, Detail, Not Found, and Create pages. Fixed API rewrites in `next.config.mjs`. Handled form validation and API error states.
 * **Sitakant Sarangi:**Build page.js and listing with loading.js.Validating ID's with not-found.js.
 * **Bhupinder Singh:** 
