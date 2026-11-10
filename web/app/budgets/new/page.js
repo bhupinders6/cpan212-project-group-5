@@ -6,53 +6,53 @@ import Link from 'next/link';
 
 export default function NewBudgetPage() {
   const router = useRouter();
-  
+
   const [userId, setUserId] = useState('user-1');
   const [currency, setCurrency] = useState('CAD');
   const [monthlyLimit, setMonthlyLimit] = useState('');
   const [month, setMonth] = useState('');
   const [year, setYear] = useState('2026');
-  
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
-
+  async function handleSubmit(e) {
     e.preventDefault();
-    setLoading(true);
-    setError('');
 
-    const newBudget = {
-      userId,
-      currency,
+    setError('');
+    setLoading(true);
+
+    const budget = {
+      userId: userId,
+      currency: currency,
       monthlyLimit: Number(monthlyLimit),
-      month,
-      year: Number(year),
-      
+      month: month,
+      year: Number(year)
     };
 
     try {
-      const res = await fetch('/api/budgets', {
+      const response = await fetch('/api/budgets', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(newBudget),
+        body: JSON.stringify(budget)
       });
 
-      if (res.ok) {
+      if (response.ok) {
         router.push('/budgets');
         router.refresh();
       } else {
-        const data = await res.json();
-        setError(data.message || 'Validation failed');
+        const result = await response.json();
+        setError(result.message || 'Something went wrong.');
         setLoading(false);
       }
-    } catch (err) {
-      setError('Could not connect to the server');
+
+    } catch (error) {
+      setError('Unable to connect to the server.');
       setLoading(false);
     }
-  };
+  }
 
   return (
     <div>
@@ -65,60 +65,62 @@ export default function NewBudgetPage() {
       {error && <p style={{ color: 'red' }}>{error}</p>}
 
       <form onSubmit={handleSubmit}>
+
         <div>
-          <label>User ID: </label>
-          <input 
-            type="text" 
-            value={userId} 
-            onChange={(e) => setUserId(e.target.value)} 
-            required 
+          <label>User ID:</label>
+          <input
+            type="text"
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+            required
           />
         </div>
 
         <div>
-          <label>Currency: </label>
-          <input 
-            type="text" 
-            value={currency} 
-            onChange={(e) => setCurrency(e.target.value)} 
-            required 
+          <label>Currency:</label>
+          <input
+            type="text"
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value)}
+            required
           />
         </div>
 
         <div>
-          <label>Monthly Limit: </label>
-          <input 
-            type="number" 
-            value={monthlyLimit} 
-            onChange={(e) => setMonthlyLimit(e.target.value)} 
-            required 
+          <label>Monthly Limit:</label>
+          <input
+            type="number"
+            value={monthlyLimit}
+            onChange={(e) => setMonthlyLimit(e.target.value)}
+            required
           />
         </div>
 
         <div>
-          <label>Month: </label>
-          <input 
-            type="text" 
+          <label>Month:</label>
+          <input
+            type="text"
             placeholder="e.g. November"
-            value={month} 
-            onChange={(e) => setMonth(e.target.value)} 
-            required 
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            required
           />
         </div>
 
         <div>
-          <label>Year: </label>
-          <input 
-            type="number" 
-            value={year} 
-            onChange={(e) => setYear(e.target.value)} 
-            required 
+          <label>Year:</label>
+          <input
+            type="number"
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            required
           />
         </div>
 
         <button type="submit" disabled={loading}>
           {loading ? 'Saving...' : 'Create Budget'}
         </button>
+
       </form>
     </div>
   );

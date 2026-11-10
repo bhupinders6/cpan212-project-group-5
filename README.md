@@ -18,6 +18,6 @@ Groupe Number: 5
 - Amrit Tiwana — [@Amrit07x](https://github.com/Amrit07x)
 
 ## AI use
-No AI tools were used to generate the core logic of this assignment. AI was used strictly for debugging terminal output and formatting Markdown documentation.
+An AI coding assistant was used to help connect the budgets page to the budget API and fix related API validation and CRUD issues. The assistant also helped check the changes with linting, a build, and API tests. AI was not used to create the entire project; team members' contributions are listed in [CONTRIBUTIONS.md](./CONTRIBUTIONS.md). Any additional AI use by team members should also be disclosed here.
 
  

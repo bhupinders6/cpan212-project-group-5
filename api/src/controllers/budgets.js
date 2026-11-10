@@ -24,14 +24,14 @@ let budgets= [
 ];
 
 
-// to get al budgets
+// to get all budgets
 export const getBudgets = (req, res) => {
     res.json(budgets);
 };
 
 // to get the budgetby ID
 export const getBudgetById=(req,res,next)=>{
-    const budget= bugets.find(b=> b.id===req.params.id);
+    const budget= budgets.find(b=> b.id===req.params.id);
 
     if(!budget){
         return res.status(404).json({message: 'Budget not found'});
@@ -54,7 +54,7 @@ export const createBudget= (req,res)=> {
 
 // to update the budget 
 export const updateBudget= (req,res, next)=>{
-    const budget=budget.find(b=> b.id===req.params.id);
+    const budget=budgets.find(b=> b.id===req.params.id);
 
     if(!budget){
         return res.status(404).json({message: 'Budget not found'});
@@ -72,6 +72,6 @@ export const deleteBudget= (req,res)=>{
         return res.status(404).json({message: 'Budget not found'});
     }
 
-    budget.splice(index,1);
+    budgets.splice(index,1);
     res.status(204).send();
 };

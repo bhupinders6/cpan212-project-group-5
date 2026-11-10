@@ -1,311 +1,504 @@
+
 "use client";
 
-import { useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useState, useEffect, useRef } from "react";
 
-const BUDGETS_KEY = "budgets";
-const REMITTANCES_KEY = "remittances";
-const RECORDS_EVENT = "budgets-records-updated";
-const SERVER_RECORDS_SNAPSHOT = JSON.stringify(["[]", "[]"]);
-const currency = new Intl.NumberFormat("en-CA", {
-  style: "currency",
-  currency: "CAD",
-});
-const monthFormat = new Intl.DateTimeFormat("en-CA", {
-  month: "long",
-  year: "numeric",
-});
+function getCurrentMonth() {
+  const today = new Date();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
 
-function currentMonth() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  return today.getFullYear() + "-" + month;
 }
 
-function subscribeToRecords(callback) {
-  const handleStorage = (event) => {
-    if (!event.key || event.key === BUDGETS_KEY || event.key === REMITTANCES_KEY) {
-      callback();
-    }
-  };
-  window.addEventListener("storage", handleStorage);
-  window.addEventListener(RECORDS_EVENT, callback);
-  return () => {
-    window.removeEventListener("storage", handleStorage);
-    window.removeEventListener(RECORDS_EVENT, callback);
+function normalizeBudget(budget) {
+  const monthIndex = new Date(
+    `${budget.month} 1, ${budget.year}`
+  ).getMonth();
+  const month = Number.isNaN(monthIndex)
+    ? getCurrentMonth()
+    : `${budget.year}-${String(monthIndex + 1).padStart(2, "0")}`;
+
+  return {
+    ...budget,
+    amount: Number(budget.monthlyLimit ?? budget.amount),
+    month
   };
 }
 
-function getRecordsSnapshot() {
-  try {
-    return JSON.stringify([
-      localStorage.getItem(BUDGETS_KEY) ?? "[]",
-      localStorage.getItem(REMITTANCES_KEY) ?? "[]",
-    ]);
-  } catch (error) {
-    return JSON.stringify({ error: error.message });
-  }
-}
+function toApiBudget(month, amount, existingBudget) {
+  const [year, monthNumber] = month.split("-").map(Number);
 
-function subscribeToMonth(callback) {
-  let month = currentMonth();
-  const timer = window.setInterval(() => {
-    const nextMonth = currentMonth();
-    if (nextMonth !== month) {
-      month = nextMonth;
-      callback();
-    }
-  }, 60_000);
-  return () => window.clearInterval(timer);
-}
-
-function formatMonth(month) {
-  return monthFormat.format(new Date(`${month}-01T00:00:00`));
-}
-
-function newId() {
-  return typeof crypto !== "undefined" && crypto.randomUUID
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return {
+    userId: existingBudget?.userId || "user-1",
+    currency: existingBudget?.currency || "CAD",
+    monthlyLimit: amount,
+    month: new Date(year, monthNumber - 1, 1).toLocaleString("en-US", {
+      month: "long"
+    }),
+    year
+  };
 }
 
 export default function BudgetsPage() {
+  const [budgets, setBudgets] = useState([]);
+  const [remittances, setRemittances] = useState([]);
+  const activeMonth = getCurrentMonth();
   const [error, setError] = useState("");
   const [dialogError, setDialogError] = useState("");
   const [editingId, setEditingId] = useState(null);
+  const [saving, setSaving] = useState(false);
+
   const dialogRef = useRef(null);
   const formRef = useRef(null);
-  const recordsSnapshot = useSyncExternalStore(
-    subscribeToRecords,
-    getRecordsSnapshot,
-    () => SERVER_RECORDS_SNAPSHOT,
-  );
-  const activeMonth = useSyncExternalStore(
-    subscribeToMonth,
-    currentMonth,
-    () => "",
-  );
-  const savedRecords = useMemo(() => {
-    try {
-      const parsed = JSON.parse(recordsSnapshot);
-      if (!Array.isArray(parsed)) throw new Error(parsed.error);
-      const budgets = JSON.parse(parsed[0]);
-      const remittances = JSON.parse(parsed[1]);
-      if (!Array.isArray(budgets) || !Array.isArray(remittances)) {
-        throw new Error("Saved budgets and remittances must be lists.");
+
+  // to change the format of the month
+  function formatMonth(month) {
+    const date = new Date(month + "-01T00:00:00");
+
+    return date.toLocaleDateString("en-CA", {
+      month: "long",
+      year: "numeric"
+    });
+  }
+
+  // to format the money in CAD
+  function formatMoney(amount) {
+    return new Intl.NumberFormat("en-CA", {
+      style: "currency",
+      currency: "CAD"
+    }).format(amount);
+  }
+
+  useEffect(() => {
+    function loadRemittances() {
+      try {
+        const savedData = localStorage.getItem("remittances");
+
+        if (savedData) {
+          const data = JSON.parse(savedData);
+
+          if (Array.isArray(data)) {
+            setRemittances(data);
+          }
+        }
+
+      } catch (err) {
+        setError("Could not load remittances from browser storage.");
       }
-      return { budgets, remittances, error: "" };
-    } catch (loadError) {
-      return {
-        budgets: [],
-        remittances: [],
-        error: `Could not load saved budget data: ${loadError.message}`,
-      };
     }
-  }, [recordsSnapshot]);
-  const { budgets, remittances } = savedRecords;
 
-  const orderedBudgets = useMemo(
-    () => [...budgets].sort((a, b) => b.month.localeCompare(a.month)),
-    [budgets],
-  );
-  const currentBudget = budgets.find((budget) => budget.month === activeMonth);
-  const currentSpent = useMemo(
-    () =>
-      remittances.reduce((total, remittance) => {
-        const amount = Number(remittance.amount);
-        return remittance.date?.startsWith(activeMonth) && Number.isFinite(amount)
-          ? total + amount
-          : total;
-      }, 0),
-    [activeMonth, remittances],
-  );
-  const available = currentBudget ? currentBudget.amount - currentSpent : 0;
+    loadRemittances();
 
-  function openForm(budget = null) {
+    fetch("/api/budgets")
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Failed to load budgets");
+        }
+
+        return res.json();
+      })
+      .then((data) => {
+        if (!Array.isArray(data)) {
+          throw new Error("Invalid budget data");
+        }
+
+        setBudgets(data.map(normalizeBudget));
+        setError("");
+      })
+      .catch((err) => {
+        setError("Could not load budgets: " + err.message);
+      });
+
+    function updateData(event) {
+      if (!event.key || event.key === "remittances") {
+        loadRemittances();
+      }
+    }
+
+    window.addEventListener("storage", updateData);
+
+    return () => {
+      window.removeEventListener("storage", updateData);
+    };
+  }, []);
+
+  // to find the current month's budget
+  const currentBudget = budgets.find(
+    (budget) => budget.month === activeMonth
+  );
+
+  // to calculate remittance spending for a month
+  function getSpent(month) {
+    let total = 0;
+
+    for (let i = 0; i < remittances.length; i++) {
+      const item = remittances[i];
+      const amount = Number(item.amount);
+
+      if (
+        item.date &&
+        item.date.startsWith(month) &&
+        Number.isFinite(amount)
+      ) {
+        total = total + amount;
+      }
+    }
+
+    return total;
+  }
+
+  const currentSpent = getSpent(activeMonth);
+
+  let available = 0;
+
+  if (currentBudget) {
+    available = currentBudget.amount - currentSpent;
+  }
+
+  // to open the budget form
+  function openForm(budget) {
     setError("");
     setDialogError("");
-    setEditingId(budget?.id ?? null);
-    formRef.current?.reset();
+
+    if (budget) {
+      setEditingId(budget.id);
+    } else {
+      setEditingId(null);
+    }
+
     if (formRef.current) {
-      formRef.current.elements.month.value = budget?.month ?? activeMonth;
-      formRef.current.elements.amount.value = budget?.amount ?? "";
-    }
-    dialogRef.current?.showModal();
-  }
+      formRef.current.reset();
 
-  function persist(nextBudgets) {
-    try {
-      localStorage.setItem(BUDGETS_KEY, JSON.stringify(nextBudgets));
-      window.dispatchEvent(new Event(RECORDS_EVENT));
-      setError("");
-      return true;
-    } catch (saveError) {
-      const message = `Could not save your budget: ${saveError.message}`;
-      setError(message);
-      setDialogError(message);
-      return false;
+      formRef.current.elements.month.value =
+        budget ? budget.month : activeMonth;
+
+      formRef.current.elements.amount.value =
+        budget ? budget.amount : "";
+    }
+
+    if (dialogRef.current) {
+      dialogRef.current.showModal();
     }
   }
 
-  function handleSubmit(event) {
+  // to add or update a budget
+  async function handleSubmit(event) {
     event.preventDefault();
+    setDialogError("");
+    setSaving(true);
+
     const formData = new FormData(event.currentTarget);
-    const month = String(formData.get("month"));
+
+    const month = formData.get("month");
     const amount = Number(formData.get("amount"));
+
     if (!month || !Number.isFinite(amount) || amount <= 0) {
-      setDialogError("Enter a month and a budget amount greater than zero.");
+      setDialogError("Please enter a valid month and amount.");
+      setSaving(false);
       return;
     }
 
-    if (budgets.some((budget) => budget.month === month && budget.id !== editingId)) {
-      setDialogError("A budget already exists for that month. Edit the existing budget instead.");
+    const existingBudget = budgets.find((budget) => budget.id === editingId);
+
+    // to check if another budget already exists for this month
+    for (let i = 0; i < budgets.length; i++) {
+      if (
+        budgets[i].month === month &&
+        budgets[i].id !== editingId &&
+        (budgets[i].userId || "user-1") ===
+          (existingBudget?.userId || "user-1")
+      ) {
+        setDialogError("A budget already exists for this month.");
+        setSaving(false);
+        return;
+      }
+    }
+
+    try {
+      const response = await fetch(
+        editingId ? `/api/budgets/${editingId}` : "/api/budgets",
+        {
+          method: editingId ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(toApiBudget(month, amount, existingBudget))
+        }
+      );
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(
+          result.error?.message || result.message || "Could not save budget."
+        );
+      }
+
+      const savedBudget = normalizeBudget(await response.json());
+      setBudgets((currentBudgets) =>
+        editingId
+          ? currentBudgets.map((budget) =>
+              budget.id === editingId ? savedBudget : budget
+            )
+          : [...currentBudgets, savedBudget]
+      );
+      setError("");
+      window.dispatchEvent(new Event("budgets-records-updated"));
+      dialogRef.current?.close();
+    } catch (err) {
+      setDialogError(err.message || "Could not save budget.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // to delete a budget
+  async function deleteBudget(budget) {
+    const answer = window.confirm(
+      "Are you sure you want to delete the " +
+      formatMonth(budget.month) + " budget?"
+    );
+
+    if (!answer) {
       return;
     }
 
-    const nextBudgets = editingId
-      ? budgets.map((budget) =>
-          budget.id === editingId ? { ...budget, month, amount } : budget,
-        )
-      : [...budgets, { id: newId(), month, amount }];
+    try {
+      const response = await fetch(`/api/budgets/${budget.id}`, {
+        method: "DELETE"
+      });
 
-    if (persist(nextBudgets)) dialogRef.current?.close();
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(
+          result.error?.message || result.message || "Could not delete budget."
+        );
+      }
+
+      setBudgets((currentBudgets) =>
+        currentBudgets.filter((item) => item.id !== budget.id)
+      );
+      setError("");
+      window.dispatchEvent(new Event("budgets-records-updated"));
+    } catch (err) {
+      setError(err.message || "Could not delete budget.");
+    }
   }
 
-  function deleteBudget(budget) {
-    if (!window.confirm(`Delete the ${formatMonth(budget.month)} budget?`)) return;
-    persist(budgets.filter((item) => item.id !== budget.id));
-  }
+  // to sort budgets by month
+  const orderedBudgets = [...budgets].sort((a, b) => {
+    return b.month.localeCompare(a.month);
+  });
 
   return (
     <main className="page-shell">
+
+      {/* Page heading */}
       <header className="page-header">
         <div>
           <p className="eyebrow">PERSONAL FINANCE</p>
+
           <h1>Monthly budgets</h1>
-          <p className="subtitle">Plan your remittances and keep each month on track.</p>
+
+          <p className="subtitle">
+            Plan your remittances and manage your monthly budget.
+          </p>
         </div>
-        <button className="button button-primary" disabled={!activeMonth} onClick={() => openForm()}>
-          <span aria-hidden="true">+</span> Add budget
+
+        <button
+          className="button button-primary"
+          onClick={() => openForm(null)}
+          disabled={!activeMonth}
+        >
+          + Add budget
         </button>
       </header>
 
-      {(error || savedRecords.error) && (
-        <p className="notice" role="alert">{error || savedRecords.error}</p>
+      {error && (
+        <p className="notice" role="alert">{error}</p>
       )}
 
-      <section className="summary-grid" aria-label="Current month overview">
+      {/* Current month information */}
+      <section className="summary-grid">
+
         <article className="summary-card">
           <span>Budget for this month</span>
-          <strong>{currentBudget ? currency.format(currentBudget.amount) : "Not set"}</strong>
-          <small>{activeMonth ? formatMonth(activeMonth) : "Loading…"}</small>
-        </article>
-        <article className="summary-card">
-          <span>Remittances this month</span>
-          <strong>{currency.format(currentSpent)}</strong>
-          <small>Based on your saved remittance records</small>
-        </article>
-        <article className={`summary-card${available < 0 ? " summary-warning" : ""}`}>
-          <span>{available < 0 ? "Over budget by" : "Remaining this month"}</span>
+
           <strong>
             {currentBudget
-              ? currency.format(Math.abs(available))
-              : currency.format(0)}
+              ? formatMoney(currentBudget.amount)
+              : "Not set"}
           </strong>
-          <small>{currentBudget ? "Budget less remittances" : "Set a budget to see what remains"}</small>
+
+          <small>
+            {activeMonth ? formatMonth(activeMonth) : "Loading..."}
+          </small>
         </article>
+
+        <article className="summary-card">
+          <span>Remittances this month</span>
+
+          <strong>{formatMoney(currentSpent)}</strong>
+
+          <small>Based on saved remittance records</small>
+        </article>
+
+        <article className={
+          available < 0
+            ? "summary-card summary-warning"
+            : "summary-card"
+        }>
+          <span>
+            {available < 0 ? "Over budget by" : "Remaining this month"}
+          </span>
+
+          <strong>
+            {currentBudget
+              ? formatMoney(Math.abs(available))
+              : formatMoney(0)}
+          </strong>
+
+          <small>
+            {currentBudget
+              ? "Budget minus remittances"
+              : "Add a budget to see your balance"}
+          </small>
+        </article>
+
       </section>
 
-      <section className="budget-panel" aria-labelledby="budgets-heading">
+      {/* Budget list */}
+      <section className="budget-panel">
+
         <div className="panel-heading">
           <div>
-            <h2 id="budgets-heading">Your budgets</h2>
-            <p>One budget per month, shown in Canadian dollars.</p>
+            <h2>Your budgets</h2>
+            <p>All your monthly budgets in Canadian dollars.</p>
           </div>
-          <span className="budget-count">{budgets.length} {budgets.length === 1 ? "month" : "months"}</span>
+
+          <span className="budget-count">
+            {budgets.length} {budgets.length === 1 ? "month" : "months"}
+          </span>
         </div>
 
-        {!activeMonth ? (
-          <p className="empty-state">Loading your budgets…</p>
-        ) : savedRecords.error ? (
-          <p className="empty-state" role="status">
-            Your budgets could not be displayed because the saved data could not be read.
-          </p>
-        ) : orderedBudgets.length === 0 ? (
-          <div className="empty-state" role="status">
-            <span className="empty-icon" aria-hidden="true">$</span>
+        {orderedBudgets.length === 0 ? (
+
+          <div className="empty-state">
+            <span className="empty-icon">$</span>
+
             <h3>No budgets yet</h3>
-            <p>Add a monthly budget to start tracking your remittances.</p>
-            <button className="button button-primary" onClick={() => openForm()}>
+
+            <p>Add a monthly budget to start tracking your money.</p>
+
+            <button
+              className="button button-primary"
+              onClick={() => openForm(null)}
+            >
               Add your first budget
             </button>
           </div>
+
         ) : (
+
           <div className="table-scroll">
+
             <table>
               <thead>
                 <tr>
-                  <th scope="col">Month</th>
-                  <th scope="col">Budget</th>
-                  <th scope="col">Remittances</th>
-                  <th scope="col">Remaining</th>
-                  <th scope="col">Progress</th>
-                  <th scope="col"><span className="visually-hidden">Actions</span></th>
+                  <th>Month</th>
+                  <th>Budget</th>
+                  <th>Remittances</th>
+                  <th>Remaining</th>
+                  <th>Progress</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
+
               <tbody>
                 {orderedBudgets.map((budget) => {
-                  const spent = remittances.reduce((total, remittance) => {
-                    const amount = Number(remittance.amount);
-                    return remittance.date?.startsWith(budget.month) && Number.isFinite(amount)
-                      ? total + amount
-                      : total;
-                  }, 0);
-                  const ratio = spent / budget.amount;
-                  const percent = Math.round(ratio * 100);
-                  const progressClass = ratio >= 1 ? "progress-danger" : ratio >= 0.75 ? "progress-caution" : "";
+
+                  const spent = getSpent(budget.month);
                   const remaining = budget.amount - spent;
+
+                  const percent = Math.round(
+                    (spent / budget.amount) * 100
+                  );
+
+                  let progressClass = "";
+
+                  if (percent >= 100) {
+                    progressClass = "progress-danger";
+                  } else if (percent >= 75) {
+                    progressClass = "progress-caution";
+                  }
+
+                  const progressWidth = Math.min(
+                    Math.max(percent, 0),
+                    100
+                  );
 
                   return (
                     <tr key={budget.id}>
-                      <th scope="row">{formatMonth(budget.month)}</th>
-                      <td>{currency.format(budget.amount)}</td>
-                      <td>{currency.format(spent)}</td>
-                      <td className={remaining < 0 ? "over-budget" : ""}>
-                        {remaining < 0 ? `-${currency.format(Math.abs(remaining))}` : currency.format(remaining)}
+
+                      <th scope="row">
+                        {formatMonth(budget.month)}
+                      </th>
+
+                      <td>{formatMoney(budget.amount)}</td>
+
+                      <td>{formatMoney(spent)}</td>
+
+                      <td>
+                        {remaining < 0
+                          ? "-" + formatMoney(Math.abs(remaining))
+                          : formatMoney(remaining)}
                       </td>
+
                       <td>
                         <div
-                          className={`progress-track ${progressClass}`}
-                          role="progressbar"
-                          aria-label={`${formatMonth(budget.month)} budget used`}
-                          aria-valuemin="0"
-                          aria-valuemax="100"
-                          aria-valuenow={Math.min(percent, 100)}
+                          className={"progress-track " + progressClass}
                         >
-                          <span style={{ width: `${Math.min(percent, 100)}%` }} />
+                          <span
+                            style={{ width: progressWidth + "%" }}
+                          />
                         </div>
-                        <span className="progress-label">{percent}% used</span>
+
+                        <span className="progress-label">
+                          {percent}% used
+                        </span>
                       </td>
+
                       <td className="row-actions">
-                        <button className="button button-small" onClick={() => openForm(budget)}>
+
+                        <button
+                          className="button button-small"
+                          onClick={() => openForm(budget)}
+                        >
                           Edit
                         </button>
+
                         <button
                           className="button button-small button-delete"
                           onClick={() => deleteBudget(budget)}
                         >
                           Delete
                         </button>
+
                       </td>
+
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+
           </div>
         )}
-      </section>
-      <p className="page-note">Budgets and remittances are stored in this browser only.</p>
 
+      </section>
+
+      <p className="page-note">
+        Budgets are saved on the server. Remittances are saved in your browser.
+      </p>
+
+      {/* Add and edit budget popup */}
       <dialog
         className="budget-dialog"
         ref={dialogRef}
@@ -315,23 +508,42 @@ export default function BudgetsPage() {
           setError("");
         }}
       >
+
         <form ref={formRef} onSubmit={handleSubmit}>
+
           <div className="dialog-heading">
-            <h2>{editingId ? "Edit budget" : "Add monthly budget"}</h2>
+
+            <h2>
+              {editingId ? "Edit budget" : "Add monthly budget"}
+            </h2>
+
             <button
               className="dialog-close"
               type="button"
-              aria-label="Close dialog"
-              onClick={() => dialogRef.current?.close()}
+              onClick={() => dialogRef.current.close()}
             >
-              ×
+              X
             </button>
+
           </div>
+
           <label htmlFor="budget-month">Month</label>
-          <input id="budget-month" name="month" type="month" required />
-          <label htmlFor="budget-amount">Budget amount (CAD)</label>
+
+          <input
+            id="budget-month"
+            name="month"
+            type="month"
+            required
+          />
+
+          <label htmlFor="budget-amount">
+            Budget amount (CAD)
+          </label>
+
           <div className="amount-input">
-            <span aria-hidden="true">$</span>
+
+            <span>$</span>
+
             <input
               id="budget-amount"
               name="amount"
@@ -341,19 +553,41 @@ export default function BudgetsPage() {
               placeholder="0.00"
               required
             />
+
           </div>
-          <p className="dialog-help">Your spending is calculated from remittances recorded for the selected month.</p>
-          {dialogError && <p className="notice" role="alert">{dialogError}</p>}
+
+          <p className="dialog-help">
+            Your remittance spending will be calculated automatically.
+          </p>
+
+          {dialogError && (
+            <p className="notice">{dialogError}</p>
+          )}
+
           <div className="dialog-actions">
-            <button className="button" type="button" onClick={() => dialogRef.current?.close()}>
+
+            <button
+              className="button"
+              type="button"
+              onClick={() => dialogRef.current.close()}
+            >
               Cancel
             </button>
-            <button className="button button-primary" type="submit">
-              Save budget
+
+            <button
+              className="button button-primary"
+              type="submit"
+              disabled={saving}
+            >
+              {saving ? "Saving..." : "Save budget"}
             </button>
+
           </div>
+
         </form>
+
       </dialog>
+
     </main>
   );
 }

@@ -1,7 +1,9 @@
 import { z } from "zod";
 
 export const budgetSchema = z.object({
-  title: z.string().min(1),
-  amount: z.number().positive(),
-  category: z.string().min(1)
+  userId: z.string().min(1),
+  currency: z.string().length(3),
+  monthlyLimit: z.number().positive(),
+  month: z.string().min(1),
+  year: z.number().int()
 });

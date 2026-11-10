@@ -53,7 +53,7 @@ export default function EditBudgetPage() {
 
     try {
       const response = await fetch(`/api/budgets/${id}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },
