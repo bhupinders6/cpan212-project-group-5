@@ -20,4 +20,6 @@ Groupe Number: 5
 ## AI use
 An AI coding assistant was used to help connect the budgets page to the budget API and fix related API validation and CRUD issues. The assistant also helped check the changes with linting, a build, and API tests. AI was not used to create the entire project; team members' contributions are listed in [CONTRIBUTIONS.md](./CONTRIBUTIONS.md). Any additional AI use by team members should also be disclosed here.
 
- 
+ ## YouTube Video Link
+
+ https://www.youtube.com/watch?v=nG_CTgiwMAk
