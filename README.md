@@ -22,4 +22,4 @@ An AI coding assistant was used to help connect the budgets page to the budget A
 
  ## YouTube Video Link
 
- [https://www.youtube.com/watch?v=nG_CTgiwMAk](https://youtu.be/lKwhs7TuuvI)
+[ [https://www.youtube.com/watch?v=nG_CTgiwMAk](https://youtu.be/lKwhs7TuuvI)](https://youtu.be/14-sQahNruU)
