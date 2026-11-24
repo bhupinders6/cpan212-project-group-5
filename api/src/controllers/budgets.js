@@ -1,77 +1,36 @@
-import crypto from 'node:crypto';
+import Budget from '../models/budgetDocument.js';
 
-// sample budget data
-let budgets= [
-    {
-        id: 'b1a2c3d4-e5f6-7890-abcd-ef1234567890',
-        userId: 'user-1',
-        currency: 'INR',
-        monthlyLimit: 30000,
-        month: 'November',
-        year: 2026,
-        createdAt: new Date()
-    },
-
-    {
-        id: 'f9e8d7c6-b5a4-3210-fedc-ba0987654321',
-        userId: 'user-2',
-        currency: 'USD',
-        monthlyLimit: 500,
-        month: 'November',
-        year: 2026,
-        createdAt: new Date()
-    }
-];
-
-
-// to get all budgets
-export const getBudgets = (req, res) => {
-    res.json(budgets);
+export const getBudgets = async (_req, res) => {
+  res.json(await Budget.find());
 };
 
-// to get the budgetby ID
-export const getBudgetById=(req,res,next)=>{
-    const budget= budgets.find(b=> b.id===req.params.id);
-
-    if(!budget){
-        return res.status(404).json({message: 'Budget not found'});
-    }  
-
-    res.json(budget);
+export const getBudgetById = async (req, res) => {
+  const budget = await Budget.findOne({ id: req.params.id });
+  if (!budget) {
+    return res.status(404).json({ message: 'Budget not found' });
+  }
+  res.json(budget);
 };
 
-//to create a new budget
-export const createBudget= (req,res)=> {
-    const newBudget= {
-        id: crypto.randomUUID(),
-        ...req.body,
-        createdAt: new Date()
-    };
-    budgets.push(newBudget);
-
-    res.status(201).json(newBudget);
+export const createBudget = async (req, res) => {
+  const budget = await Budget.create(req.body);
+  res.status(201).json(budget);
 };
 
-// to update the budget 
-export const updateBudget= (req,res, next)=>{
-    const budget=budgets.find(b=> b.id===req.params.id);
-
-    if(!budget){
-        return res.status(404).json({message: 'Budget not found'});
-    }
-
-    Object.assign(budget, req.body);
-    res.json(budget);
+export const updateBudget = async (req, res) => {
+  const budget = await Budget.findOneAndUpdate(
+    { id: req.params.id }, req.body, { returnDocument: 'after', runValidators: true }
+  );
+  if (!budget) {
+    return res.status(404).json({ message: 'Budget not found' });
+  }
+  res.json(budget);
 };
 
-//to delete
-export const deleteBudget= (req,res)=>{
-    const index=budgets.findIndex(b=> b.id===req.params.id);
-
-    if(index===-1){
-        return res.status(404).json({message: 'Budget not found'});
-    }
-
-    budgets.splice(index,1);
-    res.status(204).send();
+export const deleteBudget = async (req, res) => {
+  const budget = await Budget.findOneAndDelete({ id: req.params.id });
+  if (!budget) {
+    return res.status(404).json({ message: 'Budget not found' });
+  }
+  res.status(204).send();
 };
