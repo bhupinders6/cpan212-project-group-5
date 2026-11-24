@@ -2,12 +2,25 @@
 
 ## Run locally
 
-From this directory, install dependencies and start the development server:
+Install and start [MongoDB Community Server](https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-windows/), or use a MongoDB Atlas database.
 
-```bash
+From this directory in Windows Command Prompt, install dependencies and start the development server:
+
+```cmd
 npm install
+npm run seed
 npm run dev
 ```
+
+The API connects to `mongodb://127.0.0.1:27017/remittance_tracker` by default. For Atlas or a different server, set `MONGODB_URI` in the same terminal before running the seed or server:
+
+```cmd
+set "MONGODB_URI=your-mongodb-connection-string"
+```
+
+Keep connection strings containing credentials private. `.env.example` lists supported variables; the API does not automatically load `.env` files.
+
+The seed command inserts the original sample records if their IDs do not already exist. It does not overwrite existing records. Data created by the old in-memory API cannot be recovered after that server has stopped; records saved in the browser are not automatically imported.
 
 The server listens on port `4000` by default. Set the `PORT` environment variable to use a different port.
 
@@ -27,7 +40,6 @@ Check that it is running at [http://localhost:4000/health](http://localhost:4000
 | GET | `/api/budgets/:id` | Get a budget by ID |
 | POST | `/api/budgets` | Create a budget |
 | PUT | `/api/budgets/:id` | Replace/Update a budget |
-| PATCH | `/api/budgets/:id` | Partially update a budget |
 | DELETE | `/api/budgets/:id` | Delete a budget |
 
 
@@ -35,7 +47,7 @@ Check that it is running at [http://localhost:4000/health](http://localhost:4000
 
 ### Remittances
 
-The API keeps remittances in memory and starts with sample records. Records are reset to the seed data when the server restarts. New records receive an ID generated with `crypto.randomUUID()`. Remittance records use `recipient`, `amount`, `rate`, `date`, and `purpose` fields.
+The API stores remittances in MongoDB. New records receive an ID generated with `crypto.randomUUID()`. Remittance records use `recipient`, `amount`, `rate`, `date`, and `purpose` fields.
 
 ### External Currency API
 
@@ -43,7 +55,7 @@ The API fetches live exchange rates with a 5-second timeout and 60-second cachin
 
 ### Budgets
 
-The API stores the budget data in memory and uses Zod to validate the information. Budget records use `userId`, `currency`, `monthlyLimit`, `month`, and `year` fields.
+The API stores budgets in MongoDB and uses Zod to validate the information. Budget records use `userId`, `currency`, `monthlyLimit`, `month`, and `year` fields.
 
 ## Testing
 
@@ -116,12 +128,12 @@ curl -i http://localhost:4000/api/budgets/b1a2c3d4-e5f6-7890-abcd-ef1234567890
 **Create budget (Expect 201):**
 
 ```bash
-curl -i -X POST http://localhost:4000/api/budgets -H "Content-Type: application/json" -d '{"userId":"user1","currency":"CAD","monthlyLimit":1000,"month":10,"year":2026}'
+curl -i -X POST http://localhost:4000/api/budgets -H "Content-Type: application/json" -d '{"userId":"user1","currency":"CAD","monthlyLimit":1000,"month":"November","year":2026}'
 ```
 **Update budget (Expect 200):**
 
 ```bash
-curl -i -X PATCH http://localhost:4000/api/budgets/b1a2c3d4-e5f6-7890-abcd-ef1234567890 -H "Content-Type: application/json" -d '{"monthlyLimit":35000}'
+curl -i -X PUT http://localhost:4000/api/budgets/b1a2c3d4-e5f6-7890-abcd-ef1234567890 -H "Content-Type: application/json" -d '{"userId":"user-1","currency":"INR","monthlyLimit":35000,"month":"November","year":2026}'
 ```
 **Delete budget (Expect 204):**
 
