@@ -1,25 +1,5 @@
-import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-
-// In-memory storage
-const remittances = [
-  {
-    id: randomUUID(),
-    recipient: "Priyanka",
-    amount: 250,
-    rate: 62.5,
-    date: "2026-10-21",
-    purpose: "Family support",
-  },
-  {
-    id: randomUUID(),
-    recipient: "Ajay",
-    amount: 150,
-    rate: 62.5,
-    date: "2026-11-01",
-    purpose: "Gift",
-  },
-];
+import Remittance from '../models/remittance.js';
 
 // Zod schemas
 const remittanceSchema = z.object({
@@ -49,46 +29,49 @@ function validateBody(schema, req, res) {
 }
 
 // Exported Controllers
-export const listRemittances = (_req, res) => {
-  res.json(remittances);
+export const listRemittances = async (_req, res) => {
+  res.json(await Remittance.find());
 };
 
-export const getRemittance = (req, res) => {
-  const remittance = remittances.find(item => item.id === req.params.id);
+export const getRemittance = async (req, res) => {
+  const remittance = await Remittance.findOne({ id: req.params.id });
   if (!remittance) {
     return res.status(404).json({ error: "Remittance not found." });
   }
   res.json(remittance);
 };
 
-export const createRemittance = (req, res) => {
+export const createRemittance = async (req, res) => {
   const data = validateBody(remittanceSchema, req, res);
   if (!data) return;
 
-  const newRemittance = { id: randomUUID(), ...data };
-  remittances.push(newRemittance);
+  const newRemittance = await Remittance.create(data);
   res.status(201).json(newRemittance);
 };
 
-export const updateRemittance = (req, res) => {
-  const index = remittances.findIndex(item => item.id === req.params.id);
-  if (index === -1) {
+export const updateRemittance = async (req, res) => {
+  const existing = await Remittance.exists({ id: req.params.id });
+  if (!existing) {
     return res.status(404).json({ error: "Remittance not found." });
   }
 
   const data = validateBody(remittancePatchSchema, req, res);
   if (!data) return;
 
-  remittances[index] = { ...remittances[index], ...data };
-  res.json(remittances[index]);
+  const remittance = await Remittance.findOneAndUpdate(
+    { id: req.params.id }, data, { returnDocument: 'after', runValidators: true }
+  );
+  if (!remittance) {
+    return res.status(404).json({ error: "Remittance not found." });
+  }
+  res.json(remittance);
 };
 
-export const deleteRemittance = (req, res) => {
-  const index = remittances.findIndex(item => item.id === req.params.id);
-  if (index === -1) {
+export const deleteRemittance = async (req, res) => {
+  const remittance = await Remittance.findOneAndDelete({ id: req.params.id });
+  if (!remittance) {
     return res.status(404).json({ error: "Remittance not found." });
   }
 
-  remittances.splice(index, 1);
   res.status(204).end();
 };
