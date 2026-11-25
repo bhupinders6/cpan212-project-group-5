@@ -5,7 +5,7 @@ import Remittance from './models/remittance.js';
 
 const budgets = [
   { id: 'b1a2c3d4-e5f6-7890-abcd-ef1234567890', userId: 'user-1', currency: 'INR', monthlyLimit: 30000, month: 'November', year: 2026 },
-  { id: 'f9e8d7c6-b5a4-3210-fedc-ba0987654321', userId: 'user-2', currency: 'USD', monthlyLimit: 500, month: 'November', year: 2026 },
+  { id: 'f9e8d7c6-b5a4-3210-fedc-ba0987654321', userId: 'user-2', currency: 'CAD', monthlyLimit: 500, month: 'November', year: 2026 },
 ];
 
 const remittances = [
