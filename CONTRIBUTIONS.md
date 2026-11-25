@@ -21,3 +21,10 @@
 
 ## M4
 * **Sitakant Sarangi:** Installed MongoDB and added remittances.js and database-api.test.js. Updated validate.js and README file.
+
+
+## M4
+* **Amrit Tiwana (M4):** Upgraded Remittances list page with URL-synced filtering, sorting, and pagination. Fixed Create form to properly display backend Zod 400 validation errors.
+* **Bhupinder Singh:** Updated `api/src/controllers/budgets.js` to filter by currency and month, sort safely, and paginate budget results. Also, updated `web/app/budgets/page.js` so filters, sorting, and pages stay in the URL, and showed field error messages in the budget form.
+
+* **Sitakant Sarangi:** Installed MongoDB and added remittances.js and database-api.test.js. Updated validate.js and README file.

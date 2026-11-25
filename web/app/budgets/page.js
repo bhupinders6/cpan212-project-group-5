@@ -2,6 +2,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
 
 function getCurrentMonth() {
   const today = new Date();
@@ -39,8 +42,43 @@ function toApiBudget(month, amount, existingBudget) {
   };
 }
 
+function extractFieldErrors(result) {
+  const errors = {};
+  if (!result?.details) return errors;
+
+  if (Array.isArray(result.details)) {
+    for (const item of result.details) {
+      const key = Array.isArray(item.path) ? item.path.join(".") : item.field;
+      if (key && !errors[key]) {
+        errors[key] = item.message;
+      }
+    }
+    return errors;
+  }
+
+  if (typeof result.details === "object") {
+    for (const [key, val] of Object.entries(result.details)) {
+      errors[key] = typeof val === "string" ? val : val?.message || "Invalid value";
+    }
+  }
+
+  return errors;
+}
+
 export default function BudgetsPage() {
   const [budgets, setBudgets] = useState([]);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const currencyParam = searchParams.get("currency") || "ALL";
+  const monthParam = searchParams.get("month") || "";
+  const sortParam = searchParams.get("sort") || "-year";
+  const pageParam = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
+  const limit = 5;
+
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [fieldErrors, setFieldErrors] = useState({});
   const [remittances, setRemittances] = useState([]);
   const activeMonth = getCurrentMonth();
   const [error, setError] = useState("");
@@ -50,6 +88,28 @@ export default function BudgetsPage() {
 
   const dialogRef = useRef(null);
   const formRef = useRef(null);
+  const updateUrlParams = useCallback(
+    (updates) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (
+          value === "" ||
+          value === null ||
+          value === undefined ||
+          (key === "currency" && value === "ALL") ||
+          (key === "page" && Number(value) === 1)
+        ) {
+          params.delete(key);
+        } else {
+          params.set(key, String(value));
+        }
+      }
+      const query = params.toString();
+      router.replace(query ? `/budgets?${query}` : "/budgets");
+    },
+    [router, searchParams]
+  );
+
 
   // to change the format of the month
   function formatMonth(month) {
@@ -89,7 +149,19 @@ export default function BudgetsPage() {
 
     loadRemittances();
 
-    fetch("/api/budgets")
+    const params = new URLSearchParams();
+    if (currencyParam && currencyParam !== "ALL") {
+      params.set("currency", currencyParam);
+    }
+    if (monthParam.trim()) {
+      params.set("month", monthParam.trim());
+    }
+    if (sortParam) {
+      params.set("sort", sortParam);
+    }
+    params.set("page", String(pageParam));
+    params.set("limit", String(limit));
+    fetch(`/api/budgets?${params.toString()}`)
       .then((res) => {
         if (!res.ok) {
           throw new Error("Failed to load budgets");
@@ -159,6 +231,7 @@ export default function BudgetsPage() {
   function openForm(budget) {
     setError("");
     setDialogError("");
+    setFieldErrors({});
 
     if (budget) {
       setEditingId(budget.id);
@@ -185,6 +258,7 @@ export default function BudgetsPage() {
   async function handleSubmit(event) {
     event.preventDefault();
     setDialogError("");
+    setFieldErrors({});
     setSaving(true);
 
     const formData = new FormData(event.currentTarget);
@@ -226,6 +300,7 @@ export default function BudgetsPage() {
 
       if (!response.ok) {
         const result = await response.json();
+        setFieldErrors(extractFieldErrors(result));
         throw new Error(
           result.error?.message || result.message || "Could not save budget."
         );
@@ -282,11 +357,7 @@ export default function BudgetsPage() {
     }
   }
 
-  // to sort budgets by month
-  const orderedBudgets = [...budgets].sort((a, b) => {
-    return b.month.localeCompare(a.month);
-  });
-
+  
   return (
     <main className="page-shell">
 
@@ -373,8 +444,64 @@ export default function BudgetsPage() {
             <p>All your monthly budgets in Canadian dollars.</p>
           </div>
 
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "14px" }}>
+          <select
+            aria-label="Filter by currency"
+            value={currencyParam}
+            onChange={(e) => updateUrlParams({ currency: e.target.value, page: 1 })}
+          >
+            <option value="ALL">All currencies</option>
+            <option value="CAD">CAD</option>
+            <option value="USD">USD</option>
+            <option value="INR">INR</option>
+          </select>
+
+          <input
+            type="text"
+            aria-label="Filter by month name"
+            placeholder="Filter month (e.g. October)"
+            value={monthParam}
+            onChange={(e) => updateUrlParams({ month: e.target.value, page: 1 })}
+          />
+
+          <select
+            aria-label="Sort budgets"
+            value={sortParam}
+            onChange={(e) => updateUrlParams({ sort: e.target.value, page: 1 })}
+          >
+            <option value="-year">Year (Newest first)</option>
+            <option value="year">Year (Oldest first)</option>
+            <option value="-monthlyLimit">Amount (High to low)</option>
+            <option value="monthlyLimit">Amount (Low to high)</option>
+            <option value="month">Month (A–Z)</option>
+          </select>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginLeft: "auto" }}>
+            <button
+              type="button"
+              className="button button-small"
+              disabled={pageParam <= 1}
+              onClick={() => updateUrlParams({ page: pageParam - 1 })}
+            >
+              Previous
+            </button>
+            <span>
+              Page {pageParam} of {totalPages}
+            </span>
+            <button
+              type="button"
+              className="button button-small"
+              disabled={pageParam >= totalPages}
+              onClick={() => updateUrlParams({ page: pageParam + 1 })}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+
+            
           <span className="budget-count">
-            {budgets.length} {budgets.length === 1 ? "month" : "months"}
+            {totalCount} {totalCount === 1 ? "month" : "months"}
           </span>
         </div>
 
@@ -412,7 +539,7 @@ export default function BudgetsPage() {
               </thead>
 
               <tbody>
-                {orderedBudgets.map((budget) => {
+                {budgets.map((budget) => {
 
                   const spent = getSpent(budget.month);
                   const remaining = budget.amount - spent;
@@ -535,6 +662,14 @@ export default function BudgetsPage() {
             type="month"
             required
           />
+
+          {(fieldErrors.month || fieldErrors.year) && (
+            <p className="notice" role="alert">
+              
+              {fieldErrors.month || fieldErrors.year}
+            </p>
+          )}
+
 
           <label htmlFor="budget-amount">
             Budget amount (CAD)
