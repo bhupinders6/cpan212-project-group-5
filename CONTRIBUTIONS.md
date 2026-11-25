@@ -17,3 +17,7 @@
 * **Amrit Tiwana:** Built Remittances List, Detail, Not Found, and Create pages. Fixed API rewrites in `next.config.mjs`. Handled form validation and API error states.
 * **Sitakant Sarangi:** Build page.js and listing with loading.js.Validating ID's with not-found.js.
 * **Bhupinder Singh:** Build NotificationContext.js, new/page.js, dynamic edit budget page ([id]/edit/page.js) with API integration and error handling.
+
+
+## M4
+* **Amrit Tiwana (M4):** Upgraded Remittances list page with URL-synced filtering, sorting, and pagination. Fixed Create form to properly display backend Zod 400 validation errors.

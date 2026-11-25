@@ -23,3 +23,12 @@ An AI coding assistant was used to help connect the budgets page to the budget A
  ## YouTube Video Link
 
 https://youtu.be/14-sQahNruU
+
+
+## M4 Setup
+
+- **Database:** The API now stores data in MongoDB. Set `MONGODB_URI` in `api/.env` and run `npm run seed` from the `api/` folder to load sample data (full details in [api/README.md](./api/README.md)).
+- **Remittances list query params:** The `/remittances` page keeps your filter, sort, and page in the URL, so a reload preserves your view:
+  - `search` — filter by recipient or purpose
+  - `sort` — `date-desc`, `date-asc`, `amount-desc`, `amount-asc`
+  - `page` — page number
